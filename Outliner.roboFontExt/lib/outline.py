@@ -394,7 +394,6 @@ class OutlinerPalette(WindowController):
         OutlinerGlyphEditor.controller = self
         registerGlyphEditorSubscriber(OutlinerGlyphEditor)
         addObserver(self, "drawSpaceCenterOutline", "spaceCenterDraw")
-        options = self.getOptions()
         registerRepresentationFactory(Glyph, "spaceCenterPreview", self.spaceCenterPreviewFactory)
 
     def windowWillClose(self, sender):
