@@ -8,6 +8,8 @@ from mojo.extensions import getExtensionDefault, setExtensionDefault, getExtensi
 from mojo.subscriber import WindowController, Subscriber, registerGlyphEditorSubscriber, unregisterGlyphEditorSubscriber
 from mojo.events import postEvent
 from mojo.UI import CurrentSpaceCenter
+from mojo.UI import getDefault, setDefault
+
 from mojo.events import addObserver, removeObserver
 
 import mojo.drawingTools as ctx
@@ -20,6 +22,8 @@ from outlinePen import OutlinePen
 
 
 OUTLINE_PALETTE_DEFAULT_KEY = "com.typemytype.outliner"
+OUTLINE_CHANGED_EVENT_KEY = "com.typemytype.outliner.changed"
+OUTLINE_DISPLAY_CHANGED_EVENT_KEY = "com.typemytype.outliner.displayChanged"
 
 
 def calculate(glyph, options, preserveComponents=None):
@@ -95,7 +99,6 @@ class OutlinerGlyphEditor(Subscriber):
             OUTLINE_PALETTE_DEFAULT_KEY, location='preview')
         previewContainer.clearSublayers()
 
-
     def outlinerDidChange(self, info):
         self.updateOutline()
 
@@ -132,11 +135,16 @@ class OutlinerGlyphEditor(Subscriber):
 
         if self.controller:
             options = self.controller.getOptions()
+            displayOptions = self.controller.getDisplayOptions()
             result = calculate(
                 glyph=glyph,
                 options=options
             )
             self.backgroundPath.setPath(result.getRepresentation("merz.CGPath"))
+            self.previewPath.setStrokeWidth(0)
+            self.previewPath.setStrokeColor((1, 0, 0, 1))
+            r, g, b, a = displayOptions["color"]
+            self.previewPath.setFillColor((r, g, b, a))
             self.previewPath.setPath(result.getRepresentation("merz.CGPath"))
         else:
             self.backgroundPath.setPath(None)
@@ -387,7 +395,6 @@ class OutlinerPalette(WindowController):
             callback=self.parametersTextChanged
         )
         
-        
         self.w.open()
 
     def started(self):
@@ -414,8 +421,8 @@ class OutlinerPalette(WindowController):
         return pen.path
 
     def drawSpaceCenterOutline(self, notification):
-        options = self.getDisplayOptions()
-        if not options['previewInCurrentSpaceCenter']: return 
+        displayOptions = self.getDisplayOptions()
+        if not displayOptions['previewInCurrentSpaceCenter']: return 
             
         S = CurrentSpaceCenter()
         if not S: return
@@ -430,12 +437,12 @@ class OutlinerPalette(WindowController):
         scale = notification['scale']
 
         ctx.save()
-        # @@this should be the actual foregroundColor
-        ctx.fill(0, 0, 0, 1)
+        r, g, b, a = displayOptions["color"]
+        ctx.fill(r, g, b, a)
         
-        # @@check if the stroke is active before doing this
-        # ctx.strokeWidth(3 * scale)
-        # ctx.stroke(0, 1, 0, 0.5)
+        # @@check if the stroke is active before doing this?
+        ctx.strokeWidth(0)
+        ctx.stroke(0, 0, 0, 0)
         ctx.drawPath(path)
         ctx.restore()
 
@@ -520,7 +527,7 @@ class OutlinerPalette(WindowController):
         self.w.contrastAngleText.set(f"{options['contrastAngle']}")
         self.w.miterLimitText.set(f"{options['miterLimit']}")
 
-        postEvent("com.typemytype.outliner.changed")
+        postEvent(OUTLINE_CHANGED_EVENT_KEY)
 
         S = CurrentSpaceCenter()
         if not S:
@@ -528,7 +535,7 @@ class OutlinerPalette(WindowController):
         S.updateGlyphLineView()
 
     def displayParametersChanged(self):
-        postEvent("com.typemytype.outliner.displayChanged")
+        postEvent(OUTLINE_DISPLAY_CHANGED_EVENT_KEY)
 
     def previewCallback(self, sender):
         value = sender.get()
