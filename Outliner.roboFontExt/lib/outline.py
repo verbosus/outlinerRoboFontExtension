@@ -141,6 +141,8 @@ class OutlinerGlyphEditor(Subscriber):
         else:
             self.backgroundPath.setPath(None)
             self.previewPath.setPath(None)
+        
+        glyph.asDefcon().postNotification(notification="Glyph.Changed")
 
 
 class OutlinerPalette(WindowController):
@@ -392,6 +394,7 @@ class OutlinerPalette(WindowController):
         OutlinerGlyphEditor.controller = self
         registerGlyphEditorSubscriber(OutlinerGlyphEditor)
         addObserver(self, "drawSpaceCenterOutline", "spaceCenterDraw")
+        options = self.getOptions()
         registerRepresentationFactory(Glyph, "spaceCenterPreview", self.spaceCenterPreviewFactory)
 
     def windowWillClose(self, sender):
@@ -412,6 +415,9 @@ class OutlinerPalette(WindowController):
         return pen.path
 
     def drawSpaceCenterOutline(self, notification):
+        options = self.getDisplayOptions()
+        if not options['previewInCurrentSpaceCenter']: return 
+            
         S = CurrentSpaceCenter()
         if not S: return
         
@@ -442,7 +448,6 @@ class OutlinerPalette(WindowController):
             keepBounds=self.w.keepBounds.get(),
             preserveComponents=bool(self.w.preserveComponents.get()),
             filterDoubles=bool(self.w.filterDoubles.get()),
-            previewInCurrentSpaceCenter=bool(self.w.previewInCurrentSpaceCenter.get()),
             connection=self.w.corner.getItems()[self.w.corner.get()],
             cap=self.w.cap.getItems()[self.w.cap.get()],
             closeOpenPaths=self.w.useCap.get(),
@@ -458,7 +463,8 @@ class OutlinerPalette(WindowController):
             preview=self.w.preview.get(),
             shouldFill=self.w.fill.get(),
             shouldStroke=self.w.stroke.get(),
-            color=NSColorToRgba(self.w.color.get())
+            color=NSColorToRgba(self.w.color.get()),
+            previewInCurrentSpaceCenter=bool(self.w.previewInCurrentSpaceCenter.get()),
         )
 
     # control callbacks
