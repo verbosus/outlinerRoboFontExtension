@@ -110,6 +110,17 @@ class OutlinerGlyphEditor(Subscriber):
 
     def glyphEditorGlyphDidChangeOutline(self, info):
         self.updateOutline(info["glyph"])
+        
+    def glyphEditorWillShowPreview(self, info):
+        view = info['glyphEditor'].getGlyphView()
+        self._currentGlyphViewPreviewFillColor = view.glyphViewPreviewFillColor
+        view.glyphViewPreviewFillColor = AppKit.NSColor.clearColor()
+        view.drawingBoardLayer().defaultsChanged()
+
+    def glyphEditorWillHidePreview(self, info):
+        view = info['glyphEditor'].getGlyphView()
+        view.glyphViewPreviewFillColor = self._currentGlyphViewPreviewFillColor
+        view.drawingBoardLayer().defaultsChanged()
 
     def updateDisplay(self):
         if self.controller:
@@ -150,6 +161,12 @@ class OutlinerGlyphEditor(Subscriber):
             self.backgroundPath.setPath(None)
             self.previewPath.setPath(None)
         
+        # @@this was recommended by Frederik, but doesn’t actually trigger a 
+        # space center repaint if glyph outlines are edited:
+        # 
+        # glyph.asFontParts().changed()
+        # 
+        # this, however, somehow seems to work as expected:
         glyph.asDefcon().postNotification(notification="Glyph.Changed")
 
 
