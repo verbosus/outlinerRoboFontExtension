@@ -418,15 +418,17 @@ class OutlinerPalette(WindowController):
         OutlinerGlyphEditor.controller = self
         registerGlyphEditorSubscriber(OutlinerGlyphEditor)
         addObserver(self, "drawSpaceCenterOutline", "spaceCenterDraw")
-        registerRepresentationFactory(Glyph, "spaceCenterPreview", self.spaceCenterPreviewFactory)
+        addObserver(self, "drawFontOverviewOutline", "glyphCellDrawBackground")
+        registerRepresentationFactory(Glyph, "outlinedPreview", self.outlinedPreviewFactory)
 
     def windowWillClose(self, sender):
         removeObserver(self, "spaceCenterDraw")
+        removeObserver(self, "glyphCellDrawBackground")
         unregisterGlyphEditorSubscriber(OutlinerGlyphEditor)
-        unregisterRepresentationFactory(Glyph, "spaceCenterPreview")
+        unregisterRepresentationFactory(Glyph, "outlinedPreview")
         OutlinerGlyphEditor.controller = None
 
-    def spaceCenterPreviewFactory(self, glyph):
+    def outlinedPreviewFactory(self, glyph):
         '''A factory function which creates a representation for a given glyph.'''
         options = self.getOptions()
         result = calculate(
@@ -447,16 +449,40 @@ class OutlinerPalette(WindowController):
         # get the current glyph
         glyph = notification['glyph']
         # get representation for glyph
-        path = glyph.getRepresentation("spaceCenterPreview")
+        path = glyph.getRepresentation("outlinedPreview")
         if not path:
             return
         # draw representation
-        scale = notification['scale']
+        # scale = notification['scale']
 
         ctx.save()
         r, g, b, a = displayOptions["color"]
         ctx.fill(r, g, b, a)
         
+        # @@check if the stroke is active before doing this?
+        ctx.strokeWidth(0)
+        ctx.stroke(0, 0, 0, 0)
+        ctx.drawPath(path)
+        ctx.restore()
+
+    def drawFontOverviewOutline(self, notification):
+        displayOptions = self.getDisplayOptions()
+        
+        # get the current glyph
+        glyph = notification['glyph']
+        # get representation for glyph
+        path = glyph.getRepresentation("outlinedPreview")
+        if not path: return 
+
+        # draw representation
+        cell = notification['glyphCell']
+        if not cell: return 
+
+        ctx.save()
+        r, g, b, a = displayOptions["color"]
+        ctx.fill(r, g, b, a)
+        ctx.scale(cell.scale)
+
         # @@check if the stroke is active before doing this?
         ctx.strokeWidth(0)
         ctx.stroke(0, 0, 0, 0)
