@@ -17,6 +17,7 @@ import mojo.drawingTools as ctx
 from defcon import Glyph, registerRepresentationFactory, unregisterRepresentationFactory
 
 from fontTools.pens.cocoaPen import CocoaPen
+from fontTools.misc.transform import Transform
 
 from outlinePen import OutlinePen
 
@@ -418,12 +419,12 @@ class OutlinerPalette(WindowController):
         OutlinerGlyphEditor.controller = self
         registerGlyphEditorSubscriber(OutlinerGlyphEditor)
         addObserver(self, "drawSpaceCenterOutline", "spaceCenterDraw")
-        addObserver(self, "drawFontOverviewOutline", "glyphCellDrawBackground")
+        addObserver(self, "drawFontOverviewOutline", "glyphCellDraw")
         registerRepresentationFactory(Glyph, "outlinedPreview", self.outlinedPreviewFactory)
 
     def windowWillClose(self, sender):
         removeObserver(self, "spaceCenterDraw")
-        removeObserver(self, "glyphCellDrawBackground")
+        removeObserver(self, "glyphCellDraw")
         unregisterGlyphEditorSubscriber(OutlinerGlyphEditor)
         unregisterRepresentationFactory(Glyph, "outlinedPreview")
         OutlinerGlyphEditor.controller = None
@@ -441,6 +442,7 @@ class OutlinerPalette(WindowController):
 
     def drawSpaceCenterOutline(self, notification):
         displayOptions = self.getDisplayOptions()
+        if not displayOptions['preview']: return
         if not displayOptions['previewInCurrentSpaceCenter']: return 
             
         S = CurrentSpaceCenter()
@@ -450,27 +452,28 @@ class OutlinerPalette(WindowController):
         glyph = notification['glyph']
         # get representation for glyph
         path = glyph.getRepresentation("outlinedPreview")
-        if not path:
-            return
-        # draw representation
-        # scale = notification['scale']
+
+        if not path: return
 
         ctx.save()
         r, g, b, a = displayOptions["color"]
-        ctx.fill(r, g, b, a)
-        
-        # @@check if the stroke is active before doing this?
-        ctx.strokeWidth(0)
-        ctx.stroke(0, 0, 0, 0)
+
+        if displayOptions['shouldStroke']:
+            ctx.strokeWidth(10)
+            ctx.stroke(r, g, b, a)
+            ctx.fill(r, g, b, 0)
+
+        if displayOptions['shouldFill']:
+            ctx.fill(r, g, b, a)
+
         ctx.drawPath(path)
         ctx.restore()
 
     def drawFontOverviewOutline(self, notification):
         displayOptions = self.getDisplayOptions()
+        if not displayOptions['preview']: return
         
-        # get the current glyph
         glyph = notification['glyph']
-        # get representation for glyph
         path = glyph.getRepresentation("outlinedPreview")
         if not path: return 
 
@@ -479,13 +482,20 @@ class OutlinerPalette(WindowController):
         if not cell: return 
 
         ctx.save()
-        r, g, b, a = displayOptions["color"]
-        ctx.fill(r, g, b, a)
+        baselineOffset = (cell.font.info.ascender + -(cell.font.info.descender) / 2) * cell.scale
+        ctx.transform(Transform(1, 0, 0, -1, cell.xOffset, cell.yOffset + (baselineOffset / 2)))
         ctx.scale(cell.scale)
 
-        # @@check if the stroke is active before doing this?
-        ctx.strokeWidth(0)
-        ctx.stroke(0, 0, 0, 0)
+        r, g, b, a = displayOptions["color"]
+
+        if displayOptions['shouldStroke']:
+            ctx.strokeWidth(10)
+            ctx.stroke(r, g, b, a)
+            ctx.fill(r, g, b, 0)
+
+        if displayOptions['shouldFill']:
+            ctx.fill(r, g, b, a)
+
         ctx.drawPath(path)
         ctx.restore()
 
