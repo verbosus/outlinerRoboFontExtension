@@ -440,11 +440,26 @@ class OutlinerPalette(WindowController):
         result.draw(pen)
         return pen.path
 
-    def drawSpaceCenterOutline(self, notification):
+    def drawPath(self, path):
+        if not path: return
+
         displayOptions = self.getDisplayOptions()
         if not displayOptions['preview']: return
         if not displayOptions['previewInCurrentSpaceCenter']: return 
-            
+
+        r, g, b, a = displayOptions["color"]
+
+        if displayOptions['shouldStroke']:
+            ctx.strokeWidth(10)
+            ctx.stroke(r, g, b, a)
+            ctx.fill(r, g, b, 0)
+
+        if displayOptions['shouldFill']:
+            ctx.fill(r, g, b, a)
+
+        ctx.drawPath(path)
+
+    def drawSpaceCenterOutline(self, notification):
         S = CurrentSpaceCenter()
         if not S: return
         
@@ -453,50 +468,31 @@ class OutlinerPalette(WindowController):
         # get representation for glyph
         path = glyph.getRepresentation("outlinedPreview")
 
-        if not path: return
-
         ctx.save()
-        r, g, b, a = displayOptions["color"]
-
-        if displayOptions['shouldStroke']:
-            ctx.strokeWidth(10)
-            ctx.stroke(r, g, b, a)
-            ctx.fill(r, g, b, 0)
-
-        if displayOptions['shouldFill']:
-            ctx.fill(r, g, b, a)
-
-        ctx.drawPath(path)
+        self.drawPath(path)
         ctx.restore()
 
     def drawFontOverviewOutline(self, notification):
-        displayOptions = self.getDisplayOptions()
-        if not displayOptions['preview']: return
-        
         glyph = notification['glyph']
         path = glyph.getRepresentation("outlinedPreview")
-        if not path: return 
 
         # draw representation
         cell = notification['glyphCell']
         if not cell: return 
 
         ctx.save()
-        baselineOffset = (cell.font.info.ascender + -(cell.font.info.descender) / 2) * cell.scale
-        ctx.transform(Transform(1, 0, 0, -1, cell.xOffset, cell.yOffset + (baselineOffset / 2)))
+        baselineYOffset = (cell.font.info.ascender + -(cell.font.info.descender) / 2) * cell.scale
+        headerHeight = 0
+        if cell.shouldDrawHeader:
+            headerHeight = cell.headerHeight
+
+        baselineYTranslate = -(baselineYOffset / 2) + (headerHeight * cell.scale)
+        ctx.transform(Transform(1, 0, 0, -1, cell.xOffset, cell.yOffset))
+        
+        ctx.translate(0, baselineYTranslate)
         ctx.scale(cell.scale)
 
-        r, g, b, a = displayOptions["color"]
-
-        if displayOptions['shouldStroke']:
-            ctx.strokeWidth(10)
-            ctx.stroke(r, g, b, a)
-            ctx.fill(r, g, b, 0)
-
-        if displayOptions['shouldFill']:
-            ctx.fill(r, g, b, a)
-
-        ctx.drawPath(path)
+        self.drawPath(path)
         ctx.restore()
 
     def getOptions(self):
