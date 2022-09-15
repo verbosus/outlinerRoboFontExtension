@@ -1,23 +1,22 @@
-import vanilla
 import AppKit
+import vanilla
+
+from fontTools.pens.cocoaPen import CocoaPen
+from fontTools.misc.transform import Transform
+
+from defcon import Glyph, registerRepresentationFactory, unregisterRepresentationFactory
 
 from lib.tools.bezierTools import roundValue
 
 from mojo.roboFont import OpenWindow, CurrentGlyph, CurrentFont
 from mojo.extensions import getExtensionDefault, setExtensionDefault, getExtensionDefaultColor, setExtensionDefaultColor, NSColorToRgba
 from mojo.subscriber import WindowController, Subscriber, registerGlyphEditorSubscriber, unregisterGlyphEditorSubscriber
-from mojo.events import postEvent
+from mojo.events import postEvent, addObserver, removeObserver
+
 from mojo.UI import CurrentSpaceCenter
 from mojo.UI import getDefault, setDefault
 
-from mojo.events import addObserver, removeObserver
-
 import mojo.drawingTools as ctx
-
-from defcon import Glyph, registerRepresentationFactory, unregisterRepresentationFactory
-
-from fontTools.pens.cocoaPen import CocoaPen
-from fontTools.misc.transform import Transform
 
 from outlinePen import OutlinePen
 
@@ -405,14 +404,6 @@ class OutlinerPalette(WindowController):
             callback=self.parametersTextChanged
         )
         b += 25
-        self.w.previewInCurrentSpaceCenter = vanilla.CheckBox(
-            (10, b, -10, 22),
-            "⚠️ Preview in current Space Center (slow)",
-            sizeStyle="small",
-            value=getExtensionDefault(f"{OUTLINE_PALETTE_DEFAULT_KEY}.previewInCurrentSpaceCenter", True),
-            callback=self.parametersTextChanged
-        )
-        
         self.w.open()
 
     def started(self):
@@ -445,7 +436,6 @@ class OutlinerPalette(WindowController):
 
         displayOptions = self.getDisplayOptions()
         if not displayOptions['preview']: return
-        if not displayOptions['previewInCurrentSpaceCenter']: return 
 
         r, g, b, a = displayOptions["color"]
 
@@ -478,6 +468,7 @@ class OutlinerPalette(WindowController):
 
         # draw representation
         cell = notification['glyphCell']
+        
         if not cell: return 
 
         ctx.save()
@@ -519,7 +510,6 @@ class OutlinerPalette(WindowController):
             shouldFill=self.w.fill.get(),
             shouldStroke=self.w.stroke.get(),
             color=NSColorToRgba(self.w.color.get()),
-            previewInCurrentSpaceCenter=bool(self.w.previewInCurrentSpaceCenter.get()),
         )
 
     # control callbacks
