@@ -2,4 +2,4 @@
 
 Outlines strokes
 
-![image](outliner@2x.png)
+<img src="outliner@2x.png" alt="Screenshot showing the outliner palette" width="446">
