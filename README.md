@@ -2,4 +2,4 @@
 
 Outlines strokes
 
-![image](outliner.png)
+![image](outliner@2x.png)
