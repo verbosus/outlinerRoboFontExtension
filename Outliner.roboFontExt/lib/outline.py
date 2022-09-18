@@ -11,6 +11,7 @@ from lib.tools.bezierTools import roundValue
 from mojo.roboFont import OpenWindow, CurrentGlyph, CurrentFont
 from mojo.extensions import getExtensionDefault, setExtensionDefault, getExtensionDefaultColor, setExtensionDefaultColor, NSColorToRgba
 from mojo.subscriber import WindowController, Subscriber, registerGlyphEditorSubscriber, unregisterGlyphEditorSubscriber
+from mojo.subscriber import registerCurrentFontSubscriber, unregisterCurrentFontSubscriber
 from mojo.events import postEvent, addObserver, removeObserver
 
 from mojo.UI import CurrentSpaceCenter
@@ -71,6 +72,17 @@ def calculate(glyph, options, preserveComponents=None):
             wrapped.scaleBy((scale, scale), center)
 
     return result
+
+
+class OutlinerFontWatcher(Subscriber):
+
+    controller = None
+
+    def currentFontInfoDidChange(self, info):
+        self.controller.updateSavedStatus()
+
+    def currentFontDidSetFont(self, info):
+        self.controller.updateSavedStatus()
 
 
 class OutlinerGlyphEditor(Subscriber):
@@ -378,16 +390,16 @@ class OutlinerPalette(WindowController):
             callback=self.colorCallback
         )
 
-        b = 0
+        b = 10
         self.expandGroup.expandInLayer = vanilla.CheckBox(
-            (120, b, -10, 22),
+            (24, b, -10, 22),
             "Expand In Layer",
             sizeStyle="small",
             value=getExtensionDefault(f"{OUTLINER_DEFAULT_KEY}.expandInLayer", False),
             callback=self.expandChangedCallback
         )
         self.expandGroup.expandLayerName = vanilla.EditText(
-            (240, b, 100, 18),
+            (130, b + 2, 100, 18),
             getExtensionDefault(f"{OUTLINER_DEFAULT_KEY}.expandLayerName", "outlined"),
             sizeStyle="small",
             callback=self.expandChangedCallback
@@ -396,7 +408,7 @@ class OutlinerPalette(WindowController):
 
         b += 25
         self.expandGroup.preserveComponents = vanilla.CheckBox(
-            (120, b, -10, 22),
+            (24, b, -10, 22),
             "Preserve Components",
             sizeStyle="small",
             value=getExtensionDefault(f"{OUTLINER_DEFAULT_KEY}.preserveComponents", False),
@@ -404,7 +416,7 @@ class OutlinerPalette(WindowController):
         )
         b += 25
         self.expandGroup.filterDoubles = vanilla.CheckBox(
-            (120, b, -10, 22),
+            (24, b, -10, 22),
             "Filter Double points",
             sizeStyle="small",
             value=getExtensionDefault(f"{OUTLINER_DEFAULT_KEY}.filterDoubles", True),
@@ -412,18 +424,21 @@ class OutlinerPalette(WindowController):
         )
         b += 30
 
-        self.expandGroup.applySelection = vanilla.Button((120, b, 80, 22), "Expand Font", self.expandFont, sizeStyle="small")
-        self.expandGroup.applyNewFont = vanilla.Button((200, b, 120, 22), "Expand Selection", self.expandSelection, sizeStyle="small")
-        self.expandGroup.apply = vanilla.Button((320, b, 60, 22), "Expand", self.expand, sizeStyle="small")
+        self.expandGroup.applySelection = vanilla.Button((20, b, 90, 22), "Expand Font", self.expandFont, sizeStyle="small")
+        self.expandGroup.applyNewFont = vanilla.Button((115, b, 110, 22), "Expand Selection", self.expandSelection, sizeStyle="small")
+        self.expandGroup.apply = vanilla.Button((230, b, 60, 22), "Expand", self.expand, sizeStyle="small")
 
-        self.storageGroup.saveSettings = vanilla.Button((10, 10, 100, 22), "Save", self.saveSettings, sizeStyle="small")
-        self.storageGroup.loadSettings = vanilla.Button((120, 10, 100, 22), "Load", self.loadSettings, sizeStyle="small")
+        self.storageGroup.saveSettings = vanilla.Button((20, 10, 80, 22), "Save", self.saveSettings, sizeStyle="small")
+        self.storageGroup.loadSettings = vanilla.Button((110, 10, 80, 22), "Load", self.loadSettings, sizeStyle="small")
+        self.storageGroup.clearSettings = vanilla.Button((200, 10, 60, 22), "Clear", self.clearSettings, sizeStyle="small")
+
+        self.storageGroup.savedDataStatus = vanilla.TextBox((20, 40, 280, 14), "XXX", alignment="left", sizeStyle="small")
 
         descriptions = [
             dict(label="Outline parameters", view=self.outlineGroup, size=370, collapsed=False, canResize=False),
             dict(label="Preview", view=self.previewGroup, size=90, collapsed=True, canResize=False),
-            dict(label="Expand", view=self.expandGroup, size=140, collapsed=True, canResize=False),
-            dict(label="Storage into font.lib", view=self.storageGroup, size=140, collapsed=True, canResize=False),
+            dict(label="Expand", view=self.expandGroup, size=130, collapsed=True, canResize=False),
+            dict(label="Storage into font.lib", view=self.storageGroup, size=80, collapsed=True, canResize=False),
         ]
         self.w.accordionView = AccordionView((0, 0, -0, -0), descriptions)
         
@@ -432,6 +447,10 @@ class OutlinerPalette(WindowController):
     def started(self):
         OutlinerGlyphEditor.controller = self
         registerGlyphEditorSubscriber(OutlinerGlyphEditor)
+
+        OutlinerFontWatcher.controller = self
+        registerCurrentFontSubscriber(OutlinerFontWatcher)
+
         addObserver(self, "drawSpaceCenterOutline", "spaceCenterDraw")
         addObserver(self, "drawFontOverviewOutline", "glyphCellDraw")
         registerRepresentationFactory(Glyph, "outlinedPreview", self.outlinedPreviewFactory)
@@ -439,9 +458,13 @@ class OutlinerPalette(WindowController):
     def windowWillClose(self, sender):
         removeObserver(self, "spaceCenterDraw")
         removeObserver(self, "glyphCellDraw")
+
         unregisterGlyphEditorSubscriber(OutlinerGlyphEditor)
-        unregisterRepresentationFactory(Glyph, "outlinedPreview")
         OutlinerGlyphEditor.controller = None
+        unregisterCurrentFontSubscriber(OutlinerFontWatcher)
+        OutlinerFontWatcher.controller = None
+
+        unregisterRepresentationFactory(Glyph, "outlinedPreview")
 
     def outlinedPreviewFactory(self, glyph):
         '''A factory function which creates a representation for a given glyph.'''
@@ -663,6 +686,20 @@ class OutlinerPalette(WindowController):
         settings.update(self.getDisplayOptions())
         return settings
 
+    def updateSavedStatus(self):
+        if self.hasSavedSettings():
+            self.storageGroup.savedDataStatus.set(f"Current font.lib has saved data")
+        else:
+            self.storageGroup.savedDataStatus.set("")
+
+    def clearSettings(self, sender):
+        f = CurrentFont()
+        if self.hasSavedSettings():
+            keys = f.lib.keys()
+            for key in keys:
+                if key.startswith(OUTLINER_DEFAULT_KEY):
+                    del f.lib[key]
+
     def hasSavedSettings(self):
         prefix = OUTLINER_DEFAULT_KEY
         f = CurrentFont()
@@ -683,7 +720,6 @@ class OutlinerPalette(WindowController):
         keys = self.getSettings().keys()
         prefix = OUTLINER_DEFAULT_KEY
         loadedSettings = {}
-        restoredSettings = []
         _keys = [
             "thickness", "contrast", "contrastAngle", "miterLimit", "closeOpenPaths",
              "keepBounds", "optimizeCurve", "addInner", "addOuter", "addOriginal",
@@ -703,10 +739,7 @@ class OutlinerPalette(WindowController):
                             attr.set(self.cornerAndCap.index(value))
                         else:
                             attr.set(value)
-                        restoredSettings.append(key)
                         break
-
-        print(restoredSettings)
 
 
 OpenWindow(OutlinerPalette)
