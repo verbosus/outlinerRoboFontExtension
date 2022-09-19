@@ -428,17 +428,19 @@ class OutlinerPalette(WindowController):
         self.expandGroup.applyNewFont = vanilla.Button((115, b, 110, 22), "Expand Selection", self.expandSelection, sizeStyle="small")
         self.expandGroup.apply = vanilla.Button((230, b, 60, 22), "Expand", self.expand, sizeStyle="small")
 
-        self.storageGroup.saveSettings = vanilla.Button((20, 10, 80, 22), "Save", self.saveSettings, sizeStyle="small")
-        self.storageGroup.loadSettings = vanilla.Button((110, 10, 80, 22), "Load", self.loadSettings, sizeStyle="small")
-        self.storageGroup.clearSettings = vanilla.Button((200, 10, 60, 22), "Clear", self.clearSettings, sizeStyle="small")
+        self.storageGroup._saveHelpText = vanilla.TextBox((20, 10, 280, 14), "Save Outliner parameters in the current font.lib", alignment="left", sizeStyle="small")
 
-        self.storageGroup.savedDataStatus = vanilla.TextBox((20, 40, 280, 14), "XXX", alignment="left", sizeStyle="small")
+        self.storageGroup.saveSettings = vanilla.Button((20, 30, 80, 22), "Save", self.saveSettings, sizeStyle="small")
+        self.storageGroup.loadSettings = vanilla.Button((110, 30, 80, 22), "Load", self.loadSettings, sizeStyle="small")
+        self.storageGroup.clearSettings = vanilla.Button((200, 30, 80, 22), "Clear", self.clearSettings, sizeStyle="small")
+
+        self.storageGroup.savedDataStatus = vanilla.TextBox((20, 56, 280, 14), "", alignment="left", sizeStyle="small")
 
         descriptions = [
-            dict(label="Outline parameters", view=self.outlineGroup, size=370, collapsed=False, canResize=False),
+            dict(label="Outline", view=self.outlineGroup, size=370, collapsed=False, canResize=False),
             dict(label="Preview", view=self.previewGroup, size=90, collapsed=True, canResize=False),
             dict(label="Expand", view=self.expandGroup, size=130, collapsed=True, canResize=False),
-            dict(label="Storage into font.lib", view=self.storageGroup, size=80, collapsed=True, canResize=False),
+            dict(label="Storage", view=self.storageGroup, size=90, collapsed=True, canResize=False),
         ]
         self.w.accordionView = AccordionView((0, 0, -0, -0), descriptions)
         
