@@ -14,7 +14,7 @@ from mojo.subscriber import WindowController, Subscriber, registerGlyphEditorSub
 from mojo.subscriber import registerCurrentFontSubscriber, unregisterCurrentFontSubscriber
 from mojo.events import postEvent, addObserver, removeObserver
 
-from mojo.UI import CurrentSpaceCenter
+from mojo.UI import CurrentSpaceCenter, CurrentFontWindow
 from mojo.UI import getDefault, setDefault
 from mojo.UI import AccordionView
 
@@ -103,6 +103,9 @@ class OutlinerGlyphEditor(Subscriber):
         self.updateDisplay()
         self.updateOutline()
 
+    def started(self):
+        self.updateFontOverview()
+
     def destroy(self):
         glyphEditor = self.getGlyphEditor()
         backgroundContainer = glyphEditor.extensionContainer(
@@ -111,6 +114,12 @@ class OutlinerGlyphEditor(Subscriber):
         previewContainer = glyphEditor.extensionContainer(
             OUTLINER_DEFAULT_KEY, location='preview')
         previewContainer.clearSublayers()
+        self.updateFontOverview()
+
+    def updateFontOverview(self):
+        # by “resizing” the font overview cells, we force them to repaint
+        w, h = CurrentFontWindow().getGlyphCollection().getGlyphCellView().getCellSize()
+        CurrentFontWindow().getGlyphCollection().setCellSize((w, h))
 
     def outlinerDidChange(self, info):
         self.updateOutline()
@@ -514,21 +523,16 @@ class OutlinerPalette(WindowController):
         glyph = notification['glyph']
         path = glyph.getRepresentation("outlinedPreview")
 
-        # draw representation
         cell = notification['glyphCell']
-        
         if not cell: return 
 
         ctx.save()
-        baselineYOffset = (cell.font.info.ascender + -(cell.font.info.descender) / 2) * cell.scale
-        headerHeight = 0
         if cell.shouldDrawHeader:
-            headerHeight = cell.headerHeight
+            ctx.translate(0, cell.headerHeight)
 
-        baselineYTranslate = -(baselineYOffset / 2) + (headerHeight * cell.scale)
         ctx.transform(Transform(1, 0, 0, -1, cell.xOffset, cell.yOffset))
-
-        ctx.translate(0, baselineYTranslate)
+        baselineOffset = -(cell.height / 2) + (cell.font.info.xHeight - cell.font.info.descender) * cell.scale
+        ctx.translate(0, baselineOffset)
         ctx.scale(cell.scale)
 
         self.drawPath(path)
@@ -690,6 +694,7 @@ class OutlinerPalette(WindowController):
 
     def updateSavedStatus(self):
         if self.hasSavedSettings():
+            self.loadSettings(None)
             self.storageGroup.savedDataStatus.set(f"Current font.lib has saved data")
         else:
             self.storageGroup.savedDataStatus.set("")
@@ -741,6 +746,9 @@ class OutlinerPalette(WindowController):
                             attr.set(self.cornerAndCap.index(value))
                         else:
                             attr.set(value)
+                            text = getattr(group, key + "Text", None)
+                            if text:
+                                text.set(value)
                         break
 
 

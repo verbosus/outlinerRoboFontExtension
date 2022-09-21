@@ -1,4 +1,4 @@
-import outlinePen
+# import outlinePen
 
 from mojo.subscriber import registerSubscriberEvent
 
@@ -8,7 +8,7 @@ registerSubscriberEvent(
     methodName="outlinerDidChange",
     lowLevelEventNames=["com.typemytype.outliner.changed"],
     dispatcher="roboFont",
-    documentation="Send when the outliner pallette did change parameters.",
+    documentation="Send when the outliner palette did change parameters.",
     delay=0,
     debug=True
 )
@@ -18,6 +18,6 @@ registerSubscriberEvent(
     methodName="outlinerDisplayDidChanged",
     lowLevelEventNames=["com.typemytype.outliner.displayChanged"],
     dispatcher="roboFont",
-    documentation="Send when the outliner pallette did change display options.",
+    documentation="Send when the outliner palette did change display options.",
     debug=True
 )
