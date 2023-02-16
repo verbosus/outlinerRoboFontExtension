@@ -659,25 +659,28 @@ class OutlinerPalette(WindowController):
             self.previewCallback(self.previewGroup.preview)
 
     def expandGlyph(self, glyph, preserveComponents=True):
-        outline = calculate(glyph, self.getOptions(), preserveComponents)
+        inputLayerName = 'foreground'
+        if CurrentGlyph() is not None:
+            inputLayerName = CurrentGlyph().layer.name
+        inputGlyph = glyph.getLayer(inputLayerName)
+        outline = calculate(inputGlyph, self.getOptions(), preserveComponents)
 
         if self.expandGroup.expandInLayer.get():
-            layerName = self.expandGroup.expandLayerName.get()
-            if layerName:
-                glyph = glyph.getLayer(layerName)
+            outputLayerName = self.expandGroup.expandLayerName.get()
+            outputGlyph = glyph.getLayer(outputLayerName)
+        else:
+            outputGlyph = glyph
 
-        glyph.prepareUndo("Outline")
-        glyph.clearContours()
-        outline.drawPoints(glyph.getPointPen())
-
-        glyph.round()
-        glyph.performUndo()
+        outputGlyph.prepareUndo("Outline")
+        outputGlyph.clearContours()
+        outline.drawPoints(outputGlyph.getPointPen())
+        outputGlyph.round()
+        outputGlyph.performUndo()
 
     def expandSelection(self, sender):
         font = CurrentFont()
         preserveComponents = bool(self.expandGroup.preserveComponents.get())
-        selection = font.selection
-        for glyphName in selection:
+        for glyphName in font.selectedGlyphNames:
             glyph = font[glyphName]
             self.expandGlyph(glyph, preserveComponents)
 
@@ -685,6 +688,10 @@ class OutlinerPalette(WindowController):
         font = CurrentFont()
         preserveComponents = bool(self.expandGroup.preserveComponents.get())
         for glyph in font:
+            if self.expandGroup.expandInLayer.get():
+                layerName = self.expandGroup.expandLayerName.get()
+                if layerName:
+                    glyph = glyph.getLayer(layerName)
             self.expandGlyph(glyph, preserveComponents)
 
     def getSettings(self):
