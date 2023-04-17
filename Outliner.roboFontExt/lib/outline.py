@@ -220,7 +220,7 @@ class OutlinerPalette(WindowController):
         self.outlineGroup.thickness = vanilla.Slider(
             (middle, y, -50, 15),
             minValue=1,
-            maxValue=200,
+            maxValue=400,
             callback=self.parametersChanged,
             value=thicknessValue,
             sizeStyle="small"
